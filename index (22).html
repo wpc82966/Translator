@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AllSpeak — Voice Translator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='19' fill='%23f0b429'/%3E%3Cellipse cx='13.5' cy='15' rx='2.8' ry='3.2' fill='%231a1030'/%3E%3Cellipse cx='26.5' cy='15' rx='2.8' ry='3.2' fill='%231a1030'/%3E%3Ccircle cx='14.6' cy='13.6' r='1' fill='white'/%3E%3Ccircle cx='27.6' cy='13.6' r='1' fill='white'/%3E%3Cpath d='M8 22.5 Q9.5 35 20 35.5 Q30.5 35 32 22.5 Z' fill='%23220808'/%3E%3Crect x='10' y='23.2' width='4.2' height='5' rx='1.4' fill='white'/%3E%3Crect x='14.8' y='22.6' width='4.6' height='5.6' rx='1.4' fill='white'/%3E%3Crect x='20' y='22.6' width='4.6' height='5.6' rx='1.4' fill='white'/%3E%3Crect x='25.4' y='23.2' width='4.2' height='5' rx='1.4' fill='white'/%3E%3Cellipse cx='20' cy='32' rx='6' ry='3' fill='%23f86060'/%3E%3C/svg%3E">
+<!-- ═══ PWA META ═══ -->
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="theme-color" content="#f0b429">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AllSpeak">
+<!-- ═══════════════ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Literata:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c10;--surface:#0e1520;--card:#131d2b;--card2:#18253a;
+  --border:#1f3050;--border2:#2a4068;
+  --text:#e8edf5;--muted:#6b8aaa;--faint:#1e3050;
+  --gold:#f0b429;--gold2:#d49010;
+  --cyan:#38bdf8;--green:#34d399;--red:#f87171;--r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Literata',Georgia,serif;
+  min-height:100dvh;display:flex;flex-direction:column;overflow-x:hidden}
+.blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px)}
+.b1{width:420px;height:420px;top:-130px;left:-110px;
+  background:radial-gradient(circle,rgba(240,180,41,.07),transparent 70%)}
+.b2{width:500px;height:500px;bottom:-160px;right:-110px;
+  background:radial-gradient(circle,rgba(56,189,248,.06),transparent 70%)}
+
+/* ── HEADER ── */
+header{position:relative;z-index:10;padding:14px 16px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(8,12,16,.88);
+  backdrop-filter:blur(14px)}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-name{font-family:'Syne',sans-serif;font-weight:800;font-size:21px;
+  letter-spacing:-.02em;
+  background:linear-gradient(90deg,var(--gold),#fff 60%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-tag{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:-2px}
+.hbtns{display:flex;gap:7px}
+.hbtn{background:var(--card);border:1px solid var(--border);color:var(--muted);
+  border-radius:9px;width:34px;height:34px;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-size:14px;transition:all .18s}
+.hbtn:active{background:var(--border);transform:scale(.88)}
+
+/* ── MAIN ── */
+main{flex:1;overflow-y:auto;position:relative;z-index:1;
+  padding:12px 14px;display:flex;flex-direction:column;gap:11px;
+  max-width:600px;width:100%;margin:0 auto}
+
+/* ── LANGUAGE ROUTE SELECTOR ── */
+.route-card{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px 14px;
+  display:flex;align-items:center;gap:8px}
+
+.lang-picker{flex:1;display:flex;flex-direction:column;gap:5px}
+.lp-label{font-family:'Syne',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lp-selected{display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1.5px solid var(--border2);
+  border-radius:10px;padding:8px 10px;cursor:pointer;transition:all .18s;
+  -webkit-user-select:none;user-select:none}
+.lp-selected:active{transform:scale(.97)}
+.lp-selected.active-from{border-color:var(--gold);
+  background:rgba(240,180,41,.08)}
+.lp-selected.active-to{border-color:var(--cyan);
+  background:rgba(56,189,248,.08)}
+.lp-flag{font-size:22px;line-height:1}
+.lp-name{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--text);flex:1}
+.lp-caret{color:var(--muted);font-size:10px}
+
+/* swap button */
+.swap-btn{width:38px;height:38px;border-radius:50%;
+  background:var(--card2);border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;flex-shrink:0;
+  transition:all .2s;-webkit-user-select:none;user-select:none}
+.swap-btn:active{transform:rotate(180deg) scale(.9)}
+
+/* ── LANGUAGE DROPDOWN ── */
+.lang-dropdown{display:none;flex-direction:column;gap:0;
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--r);overflow:hidden}
+.lang-dropdown.open{display:flex}
+.dropdown-header{padding:10px 14px;font-family:'Syne',sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.dropdown-close{cursor:pointer;font-size:16px;color:var(--muted)}
+.dropdown-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  max-height:280px;overflow-y:auto}
+.dd-tile{padding:12px 6px 10px;display:flex;flex-direction:column;
+  align-items:center;gap:4px;cursor:pointer;
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  transition:background .15s;-webkit-user-select:none;user-select:none}
+.dd-tile:nth-child(4n){border-right:none}
+.dd-tile:active{background:var(--border)}
+.dd-tile.sel-from{background:rgba(240,180,41,.1)}
+.dd-tile.sel-to{background:rgba(56,189,248,.1)}
+.dd-flag{font-size:26px;line-height:1}
+.dd-name{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:center;
+  line-height:1.2}
+.dd-tile.sel-from .dd-name{color:var(--gold)}
+.dd-tile.sel-to .dd-name{color:var(--cyan)}
+
+/* ── DIRECTION BADGE ── */
+.dir-badge{display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:7px 14px;background:var(--card2);border:1px solid var(--border);
+  border-radius:30px;margin:0 auto;font-family:'Syne',sans-serif;
+  font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.dir-badge .from-name{color:var(--gold)}
+.dir-badge .to-name{color:var(--cyan)}
+.dir-arrow{color:var(--muted)}
+
+/* ── PANELS ── */
+.panel{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px;display:flex;flex-direction:column;
+  gap:8px;min-height:100px}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between}
+.panel-lang{display:flex;align-items:center;gap:6px;font-family:'Syne',sans-serif;
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted)}
+.pf{font-size:15px}
+.pbtn{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  border-radius:7px;width:28px;height:28px;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-size:12px;transition:all .18s}
+.pbtn:active{transform:scale(.85)}
+.pbtn.on{color:var(--cyan);border-color:var(--cyan)}
+.ptext{font-size:17px;font-weight:400;line-height:1.55;color:var(--text);
+  min-height:60px;word-break:break-word;overflow-y:auto;transition:opacity .25s}
+.ptext.ph{color:var(--faint);font-style:italic;font-weight:300}
+.ptext.out{font-size:19px;font-weight:500}
+.ptext[dir=rtl]{text-align:right;font-size:20px}
+
+/* ── MIC ── */
+.mzone{display:flex;flex-direction:column;align-items:center;gap:8px;padding:2px 0}
+.mouter{position:relative;width:86px;height:86px;
+  display:flex;align-items:center;justify-content:center}
+.mouter::before,.mouter::after{content:'';position:absolute;border-radius:50%;
+  border:2px solid var(--gold);opacity:0;width:100%;height:100%;top:0;left:0}
+.mouter.pulse::before{animation:pr 1.5s ease-out infinite}
+.mouter.pulse::after{animation:pr 1.5s ease-out .55s infinite}
+@keyframes pr{0%{transform:scale(.8);opacity:.65}100%{transform:scale(1.7);opacity:0}}
+.mbtn{width:70px;height:70px;border-radius:50%;border:none;
+  background:linear-gradient(145deg,var(--gold),var(--gold2));
+  box-shadow:0 6px 24px rgba(240,180,41,.4);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:26px;transition:transform .15s;
+  -webkit-user-select:none;user-select:none;position:relative;z-index:2}
+.mbtn:active{transform:scale(.9)}
+.mbtn.rec{background:linear-gradient(145deg,var(--red),#b02020);
+  box-shadow:0 6px 24px rgba(248,113,113,.5);
+  animation:mp 1s ease-in-out infinite alternate}
+@keyframes mp{from{box-shadow:0 6px 24px rgba(248,113,113,.4)}
+              to{box-shadow:0 6px 34px rgba(248,113,113,.8)}}
+.mbtn.load{background:linear-gradient(145deg,#1e7ca8,var(--cyan));
+  box-shadow:0 6px 24px rgba(56,189,248,.4)}
+.mstat{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  min-height:16px;transition:color .25s;text-align:center}
+.mstat.go{color:var(--gold)}.mstat.tr{color:var(--cyan)}
+.mstat.sp{color:var(--green)}.mstat.er{color:var(--red)}
+
+/* ── SPEAK AGAIN ── */
+.sagain{width:100%;background:var(--surface);border:1px solid var(--cyan);
+  border-radius:10px;padding:10px;cursor:pointer;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  color:var(--cyan);letter-spacing:.04em;
+  display:none;align-items:center;justify-content:center;gap:7px;transition:all .18s}
+.sagain.vis{display:flex}
+.sagain:active{background:var(--card);transform:scale(.97)}
+
+/* ── CONTROLS ── */
+.cbar{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:10px 14px;
+  display:flex;align-items:center;gap:11px}
+.clbl{font-family:'Syne',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.crow{display:flex;align-items:center;gap:7px;flex:1}
+input[type=range]{-webkit-appearance:none;flex:1;height:3px;
+  border-radius:2px;background:var(--border2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--gold);cursor:pointer}
+
+/* ── SETUP ── */
+.setup{background:var(--card);border:1.5px solid var(--gold);
+  border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:13px}
+.sth{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold)}
+.stp{font-size:13px;color:var(--muted);line-height:1.65}
+.sti{background:var(--surface);border:1px solid var(--border2);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;
+  width:100%;outline:none;transition:border-color .2s}
+.sti:focus{border-color:var(--gold)}
+.stb{background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;
+  border-radius:10px;padding:13px;color:#080c10;font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:800;letter-spacing:.04em;cursor:pointer}
+.stb:active{opacity:.8}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:30px;padding:9px 20px;
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:600;
+  color:var(--text);z-index:200;white-space:nowrap;pointer-events:none;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.gone{display:none!important}
+</style>
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<header>
+  <div class="brand">
+    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+      <defs>
+        <radialGradient id="fg" cx="45%" cy="38%" r="60%">
+          <stop offset="0%" stop-color="#ffe5a8"/><stop offset="100%" stop-color="#f0b429"/>
+        </radialGradient>
+        <radialGradient id="mg" cx="50%" cy="20%" r="70%">
+          <stop offset="0%" stop-color="#220808"/><stop offset="100%" stop-color="#3d0a0a"/>
+        </radialGradient>
+        <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#ddd8cc"/>
+        </linearGradient>
+      </defs>
+      <circle cx="20" cy="20" r="18.5" fill="url(#fg)"/>
+      <circle cx="20" cy="20" r="18.5" fill="none" stroke="#c8880a" stroke-width=".7" opacity=".5"/>
+      <ellipse cx="8.5" cy="23.5" rx="4" ry="2.3" fill="#f87171" opacity=".2"/>
+      <ellipse cx="31.5" cy="23.5" rx="4" ry="2.3" fill="#f87171" opacity=".2"/>
+      <path d="M10.5 11.2 Q13.5 9.5 16.5 11" fill="none" stroke="#8b5e0a" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M23.5 11 Q26.5 9.5 29.5 11.2" fill="none" stroke="#8b5e0a" stroke-width="1.3" stroke-linecap="round"/>
+      <ellipse cx="13.5" cy="15" rx="2.8" ry="3.2" fill="#1a1030"/>
+      <ellipse cx="26.5" cy="15" rx="2.8" ry="3.2" fill="#1a1030"/>
+      <circle cx="14.6" cy="13.6" r="1" fill="white" opacity=".95"/>
+      <circle cx="27.6" cy="13.6" r="1" fill="white" opacity=".95"/>
+      <path d="M8 22.5 Q9.5 35 20 35.5 Q30.5 35 32 22.5 Z" fill="url(#mg)"/>
+      <path d="M8 22.5 Q14 26.5 20 25.8 Q26 26.5 32 22.5" fill="none" stroke="#b06010" stroke-width="1.3" stroke-linecap="round"/>
+      <rect x="10"   y="23.2" width="4.2" height="5"   rx="1.4" fill="url(#tg)"/>
+      <rect x="14.8" y="22.6" width="4.6" height="5.6" rx="1.4" fill="url(#tg)"/>
+      <rect x="20.0" y="22.6" width="4.6" height="5.6" rx="1.4" fill="url(#tg)"/>
+      <rect x="25.4" y="23.2" width="4.2" height="5"   rx="1.4" fill="url(#tg)"/>
+      <ellipse cx="20" cy="32" rx="6" ry="3" fill="#f86060" opacity=".88"/>
+      <path d="M35 17 Q37.5 20 35 23" fill="none" stroke="#f0b429" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>
+      <path d="M37 14 Q41 20 37 26" fill="none" stroke="#f0b429" stroke-width="1.3" stroke-linecap="round" opacity=".4"/>
+    </svg>
+    <div>
+      <div class="brand-name">AllSpeak</div>
+      <div class="brand-tag">Voice Translator</div>
+    </div>
+  </div>
+  <div class="hbtns">
+    <div class="hbtn" onclick="clearAll()">🗑</div>
+    <div class="hbtn" id="asBtn" onclick="toggleAS()">🔊</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- SETUP -->
+  <div class="setup" id="setupCard">
+    <div class="sth">⚙️ First-Time Setup</div>
+    <div class="stp">
+      AllSpeak translates between <strong>11 languages</strong> in any direction — English, Spanish, Haitian Creole, Portuguese, French, Arabic, Vietnamese, Tagalog, Hindi, Mandarin, and Japanese.<br><br>
+      Enter your <strong>Anthropic API key</strong> (free at <strong>console.anthropic.com</strong>). Saved on this device only.
+    </div>
+    <input class="sti" type="password" id="keyIn" placeholder="sk-ant-api03-…" autocomplete="off">
+    <button class="stb" onclick="saveKey()">Save & Start Translating →</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="gone" style="display:flex;flex-direction:column;gap:11px">
+
+    <!-- Language Route Selector -->
+    <div class="route-card">
+      <!-- FROM picker -->
+      <div class="lang-picker">
+        <div class="lp-label">🎤 Speaking in</div>
+        <div class="lp-selected" id="fromBtn" onclick="openDropdown('from')">
+          <span class="lp-flag" id="fromFlag">🇺🇸</span>
+          <span class="lp-name" id="fromName">English</span>
+          <span class="lp-caret">▾</span>
+        </div>
+      </div>
+      <!-- Swap -->
+      <div class="swap-btn" onclick="swapLangs()" title="Swap languages">⇄</div>
+      <!-- TO picker -->
+      <div class="lang-picker">
+        <div class="lp-label">🔊 Translate to</div>
+        <div class="lp-selected" id="toBtn" onclick="openDropdown('to')">
+          <span class="lp-flag" id="toFlag">🇪🇸</span>
+          <span class="lp-name" id="toName">Spanish</span>
+          <span class="lp-caret">▾</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dropdown (shared, positioned dynamically) -->
+    <div class="lang-dropdown" id="langDropdown">
+      <div class="dropdown-header">
+        <span id="dropdownTitle">Select Language</span>
+        <span class="dropdown-close" onclick="closeDropdown()">✕</span>
+      </div>
+      <div class="dropdown-grid" id="dropdownGrid"></div>
+    </div>
+
+    <!-- Direction badge -->
+    <div class="dir-badge">
+      <span class="from-name" id="badgeFrom">English</span>
+      <span class="dir-arrow">→</span>
+      <span class="to-name" id="badgeTo">Spanish</span>
+    </div>
+
+    <!-- Spoken input panel -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-lang"><span class="pf" id="inPanelFlag">🇺🇸</span>&nbsp;<span id="inPanelName">English</span> · What you said</div>
+      </div>
+      <div class="ptext ph" id="engEl">Tap the mic and speak…</div>
+    </div>
+
+    <!-- Mic -->
+    <div class="mzone">
+      <div class="mouter" id="mOuter">
+        <button class="mbtn" id="mBtn" onclick="tapMic()">🎤</button>
+      </div>
+      <div class="mstat" id="mStat">Tap to speak</div>
+    </div>
+
+    <!-- Translation output panel -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-lang"><span class="pf" id="outPanelFlag">🇪🇸</span>&nbsp;<span id="outPanelName">Spanish</span> · Translation</div>
+        <div class="pbtn on" onclick="speakNow()">🔊</div>
+      </div>
+      <div class="ptext out ph" id="transEl" dir="ltr">Translation will appear here…</div>
+      <button class="sagain" id="sagain" onclick="speakNow()">🔊 Speak Again</button>
+    </div>
+
+    <!-- Controls -->
+    <div class="cbar">
+      <div class="clbl">Vol</div>
+      <div class="crow"><input type="range" id="volR" min="0" max="1" step="0.05" value="1" oninput="updVoice()"></div>
+      <div class="clbl">Speed</div>
+      <div class="crow"><input type="range" id="rateR" min="0.6" max="1.3" step="0.05" value="0.92" oninput="updVoice()"></div>
+    </div>
+
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Language definitions ───────────────────────────────────────────────────
+const LANGS = [
+  {code:'en', flag:'🇺🇸', name:'English',  full:'English',                tts:'en-US', sr:'en-US', dir:'ltr'},
+  {code:'es', flag:'🇪🇸', name:'Spanish',  full:'Spanish',                tts:'es-MX', sr:'es-ES', dir:'ltr'},
+  {code:'ht', flag:'🇭🇹', name:'Creole',   full:'Haitian Creole',         tts:'fr-FR', sr:'fr-FR', dir:'ltr'},
+  {code:'pt', flag:'🇧🇷', name:'Portug.',  full:'Brazilian Portuguese',   tts:'pt-BR', sr:'pt-BR', dir:'ltr'},
+  {code:'fr', flag:'🇫🇷', name:'French',   full:'French',                 tts:'fr-FR', sr:'fr-FR', dir:'ltr'},
+  {code:'ar', flag:'🇸🇦', name:'Arabic',   full:'Arabic',                 tts:'ar-SA', sr:'ar-SA', dir:'rtl'},
+  {code:'vi', flag:'🇻🇳', name:'Viet.',    full:'Vietnamese',             tts:'vi-VN', sr:'vi-VN', dir:'ltr'},
+  {code:'tl', flag:'🇵🇭', name:'Tagalog',  full:'Tagalog (Filipino)',     tts:'fil-PH',sr:'fil-PH',dir:'ltr'},
+  {code:'hi', flag:'🇮🇳', name:'Hindi',    full:'Hindi',                  tts:'hi-IN', sr:'hi-IN', dir:'ltr'},
+  {code:'zh', flag:'🇨🇳', name:'中文',      full:'Mandarin Chinese',       tts:'zh-CN', sr:'zh-CN', dir:'ltr'},
+  {code:'ja', flag:'🇯🇵', name:'日本語',    full:'Japanese',               tts:'ja-JP', sr:'ja-JP', dir:'ltr'},
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let apiKey   = localStorage.getItem('as_key') || '';
+let fromLang = LANGS.find(l=>l.code==='en');
+let toLang   = LANGS.find(l=>l.code==='es');
+let dropMode = null;   // 'from' or 'to'
+let recog    = null;
+let recording= false;
+let autoSpeak= true;
+let curTrans = '';
+let allText  = '';
+let vol=1, spd=0.92;
+let synthVoices=[];
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  buildDropdownGrid();
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  if(apiKey) showApp();
+  // Restore saved preferences
+  const sf = localStorage.getItem('as_from');
+  const st = localStorage.getItem('as_to');
+  if(sf){ const l=LANGS.find(x=>x.code===sf); if(l) setFrom(l,false); }
+  if(st){ const l=LANGS.find(x=>x.code===st); if(l) setTo(l,false); }
+  updateUI();
+});
+function loadVoices(){ synthVoices = window.speechSynthesis.getVoices(); }
+
+// ── Setup ──────────────────────────────────────────────────────────────────
+function saveKey(){
+  const v = document.getElementById('keyIn').value.trim();
+  if(!v.startsWith('sk-')){ toast('❌ Key must start with sk-'); return; }
+  apiKey = v;
+  localStorage.setItem('as_key', apiKey);
+  showApp();
+  toast('✅ Key saved!');
+}
+function showApp(){
+  document.getElementById('setupCard').classList.add('gone');
+  const a = document.getElementById('app');
+  a.classList.remove('gone');
+  a.style.display = 'flex';
+}
+
+// ── Language selection ─────────────────────────────────────────────────────
+function buildDropdownGrid(){
+  const g = document.getElementById('dropdownGrid');
+  LANGS.forEach(l=>{
+    const d = document.createElement('div');
+    d.className = 'dd-tile';
+    d.id = 'dd_' + l.code;
+    d.innerHTML = `<div class="dd-flag">${l.flag}</div><div class="dd-name">${l.name}</div>`;
+    d.addEventListener('click', ()=>selectDropdownLang(l));
+    g.appendChild(d);
+  });
+}
+
+function openDropdown(mode){
+  dropMode = mode;
+  document.getElementById('dropdownTitle').textContent = mode==='from' ? '🎤 Speaking language' : '🔊 Translate to';
+  // Highlight current selection
+  LANGS.forEach(l=>{
+    const t = document.getElementById('dd_' + l.code);
+    t.classList.remove('sel-from','sel-to');
+  });
+  const cur = mode==='from' ? fromLang : toLang;
+  document.getElementById('dd_' + cur.code).classList.add(mode==='from' ? 'sel-from' : 'sel-to');
+  document.getElementById('langDropdown').classList.add('open');
+}
+
+function closeDropdown(){
+  document.getElementById('langDropdown').classList.remove('open');
+  dropMode = null;
+}
+
+function selectDropdownLang(l){
+  if(dropMode==='from'){
+    if(l.code === toLang.code){ swapLangs(); closeDropdown(); return; }
+    setFrom(l, true);
+  } else {
+    if(l.code === fromLang.code){ swapLangs(); closeDropdown(); return; }
+    setTo(l, true);
+  }
+  closeDropdown();
+}
+
+function setFrom(l, save){
+  fromLang = l;
+  if(save) localStorage.setItem('as_from', l.code);
+  updateUI();
+}
+function setTo(l, save){
+  toLang = l;
+  if(save) localStorage.setItem('as_to', l.code);
+  updateUI();
+}
+
+function swapLangs(){
+  const tmp = fromLang;
+  fromLang = toLang;
+  toLang = tmp;
+  localStorage.setItem('as_from', fromLang.code);
+  localStorage.setItem('as_to', toLang.code);
+  // Also swap displayed text if something was already translated
+  const spokenText  = document.getElementById('engEl').dataset.val || '';
+  const transText   = curTrans;
+  updateUI();
+  if(transText){
+    // Put the translation into the input and re-translate
+    setSpoken(transText, false);
+    document.getElementById('engEl').dataset.val = transText;
+    allText = transText;
+    setTrans('', true);
+    curTrans = '';
+    doTranslate(transText);
+  }
+}
+
+function updateUI(){
+  // From button
+  document.getElementById('fromFlag').textContent = fromLang.flag;
+  document.getElementById('fromName').textContent = fromLang.name;
+  // To button
+  document.getElementById('toFlag').textContent = toLang.flag;
+  document.getElementById('toName').textContent = toLang.name;
+  // Direction badge
+  document.getElementById('badgeFrom').textContent = fromLang.name;
+  document.getElementById('badgeTo').textContent = toLang.name;
+  // Input panel header
+  document.getElementById('inPanelFlag').textContent = fromLang.flag;
+  document.getElementById('inPanelName').textContent = fromLang.name;
+  // Output panel header
+  document.getElementById('outPanelFlag').textContent = toLang.flag;
+  document.getElementById('outPanelName').textContent = toLang.name;
+  // Output panel RTL
+  document.getElementById('transEl').setAttribute('dir', toLang.dir);
+  // Input placeholder
+  const engEl = document.getElementById('engEl');
+  if(engEl.classList.contains('ph')){
+    engEl.textContent = `Tap the mic and speak in ${fromLang.name}…`;
+  }
+  // Highlight from/to buttons
+  document.getElementById('fromBtn').className = 'lp-selected active-from';
+  document.getElementById('toBtn').className   = 'lp-selected active-to';
+}
+
+// ── SPEECH RECOGNITION ────────────────────────────────────────────────────
+// - continuous:false  → avoids duplicate-result browser bug
+// - allText shared across sub-sessions  → survives silence-timeout restarts
+// - Fresh recog object each sub-session → no stale callbacks
+// - recording flag controls whether onend restarts or translates
+
+function tapMic(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast('Use Chrome or Safari for speech'); return; }
+
+  if(recording){
+    // User tapping STOP
+    recording = false;
+    try{ recog.stop(); }catch(e){}
+    // onend fires → sees recording===false → translates
+  } else {
+    // User tapping START
+    window.speechSynthesis.cancel();
+    document.getElementById('sagain').classList.remove('vis');
+    setSpoken('', true);
+    setTrans('', true);
+    curTrans = '';
+    allText  = '';
+
+    recording = true;
+    const btn = document.getElementById('mBtn');
+    btn.classList.add('rec'); btn.textContent = '⏹';
+    document.getElementById('mOuter').classList.add('pulse');
+    stat(`Recording in ${fromLang.name}… tap ⏹ when done`, 'go');
+
+    startSubSession();
+  }
+}
+
+function startSubSession(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recog = new SR();
+  recog.lang = fromLang.sr;   // ← use FROM language for speech recognition
+  recog.continuous = false;
+  recog.interimResults = true;
+
+  recog.onresult = (e)=>{
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      if(e.results[i].isFinal){
+        const seg = e.results[i][0].transcript.trim();
+        if(seg) allText += (allText ? ' ' : '') + seg;
+      }
+    }
+    const last = e.results[e.results.length - 1];
+    const interim = last.isFinal ? '' : last[0].transcript;
+    setSpoken(allText + (interim ? ' ' + interim : ''), !!interim);
+    document.getElementById('engEl').dataset.val = allText;
+  };
+
+  recog.onend = async ()=>{
+    if(recording){
+      // Browser timed out on silence — user still recording — restart silently
+      try{ startSubSession(); }catch(e){}
+    } else {
+      // User tapped stop — translate
+      resetMicUI();
+      const txt = (document.getElementById('engEl').dataset.val || '').trim();
+      if(txt.length > 1) await doTranslate(txt);
+      else stat('Tap to speak', '');
+    }
+  };
+
+  recog.onerror = (e)=>{
+    if(e.error === 'aborted') return;
+    if(e.error === 'no-speech') return; // silence gap, onend will handle restart
+    recording = false;
+    resetMicUI();
+    const m = {
+      'not-allowed': 'Mic access denied',
+      'network':     'Network error'
+    }[e.error] || 'Error: ' + e.error;
+    stat(m, 'er');
+  };
+
+  try{ recog.start(); }catch(e){
+    if(recording) setTimeout(startSubSession, 200);
+  }
+}
+
+function resetMicUI(){
+  const btn = document.getElementById('mBtn');
+  btn.classList.remove('rec','load'); btn.textContent = '🎤';
+  document.getElementById('mOuter').classList.remove('pulse');
+}
+
+// ── Translation ────────────────────────────────────────────────────────────
+async function doTranslate(text){
+  stat('Translating…', 'tr');
+  const btn = document.getElementById('mBtn');
+  btn.classList.add('load'); btn.textContent = '⏳';
+  setTrans('', true);
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method: 'POST',
+      headers:{
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: `You are a medical interpreter for a specialty healthcare clinic. Translate the following ${fromLang.full} text into ${toLang.full}. Respond ONLY with the translation — no explanation, no quotes, no preamble. Use formal register appropriate for patient communication.`,
+        messages: [{ role:'user', content: text }]
+      })
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    curTrans = data.content[0].text.trim();
+    setTrans(curTrans, false);
+    stat('Done — tap 🎤 to translate again', '');
+    if(autoSpeak) setTimeout(speakNow, 300);
+    else document.getElementById('sagain').classList.add('vis');
+  }catch(err){
+    console.error(err);
+    const is401 = String(err.message).includes('401');
+    stat(is401 ? 'Invalid API key' : 'Translation failed — try again', 'er');
+    toast(is401 ? '❌ Invalid key' : '⚠️ Translation failed');
+  }finally{
+    btn.classList.remove('load'); btn.textContent = '🎤';
+  }
+}
+
+// ── TTS ────────────────────────────────────────────────────────────────────
+function speakNow(){
+  if(!curTrans) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(curTrans);
+  u.lang   = toLang.tts;
+  u.rate   = spd;
+  u.volume = vol;
+  const v = synthVoices.find(v=>v.lang === toLang.tts)
+         || synthVoices.find(v=>v.lang.startsWith(toLang.tts.split('-')[0]));
+  if(v) u.voice = v;
+  u.onstart = ()=> stat('🔊 Speaking…', 'sp');
+  u.onend   = ()=>{ stat('Tap 🎤 to translate again', ''); document.getElementById('sagain').classList.add('vis'); };
+  u.onerror = ()=> stat('Speaker error', 'er');
+  window.speechSynthesis.speak(u);
+}
+
+function toggleAS(){
+  autoSpeak = !autoSpeak;
+  document.getElementById('asBtn').textContent = autoSpeak ? '🔊' : '🔇';
+  toast(autoSpeak ? '🔊 Auto-speak ON' : '🔇 Auto-speak OFF');
+}
+function updVoice(){
+  vol = parseFloat(document.getElementById('volR').value);
+  spd = parseFloat(document.getElementById('rateR').value);
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function setSpoken(text, isInterim){
+  const el = document.getElementById('engEl');
+  el.dataset.val = text;
+  if(!text){
+    el.classList.add('ph');
+    el.textContent = `Tap the mic and speak in ${fromLang.name}…`;
+  } else {
+    el.classList.remove('ph');
+    el.textContent = text;
+    el.style.opacity = isInterim ? '.55' : '1';
+  }
+}
+function setTrans(text, ph){
+  const el = document.getElementById('transEl');
+  if(ph || !text){ el.classList.add('ph'); el.textContent = 'Translation will appear here…'; }
+  else { el.classList.remove('ph'); el.textContent = text; el.style.opacity = '1'; }
+}
+function stat(msg, cls){
+  const el = document.getElementById('mStat');
+  el.textContent = msg;
+  el.className = 'mstat' + (cls ? ' ' + cls : '');
+}
+function clearAll(){
+  window.speechSynthesis.cancel();
+  recording = false;
+  if(recog){ try{ recog.stop(); }catch(e){} recog = null; }
+  resetMicUI();
+  curTrans = ''; allText = '';
+  setSpoken('', true); setTrans('', true);
+  document.getElementById('sagain').classList.remove('vis');
+  stat('Tap to speak', '');
+}
+let _tt;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+window.resetKey = ()=>{ localStorage.removeItem('as_key'); location.reload(); };
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js')
+    .then(() => console.log('AllSpeak SW registered ✅'))
+    .catch(e => console.warn('SW failed:', e));
+}
+</script>
+
+</body>
+</html>
