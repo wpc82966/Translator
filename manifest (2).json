@@ -1,0 +1,25 @@
+{
+  "name": "AllSpeak — Voice Translator",
+  "short_name": "AllSpeak",
+  "description": "Speak English, hear it in 11 languages instantly",
+  "start_url": "/Translator/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c10",
+  "theme_color": "#f0b429",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "medical"]
+}
