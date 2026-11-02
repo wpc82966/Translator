@@ -1,59 +1,56 @@
-// Updated: 2026-04-09 — bump CACHE_NAME version to force refresh on all devices
 // service-worker.js — AllSpeak Voice Translator
+// Updated: 2026-11-02 — network-first for app shell so new uploads show up
+// automatically on every device; no more manual cache-version bumps needed.
 
-const CACHE_NAME = 'allspeak-v4';
-const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
+const CACHE_NAME = 'allspeak-v5';
+const STATIC_ASSETS = ['./', './index.html', './manifest.json'];
 
-// Install — cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).catch(() => {})
+    caches.open(CACHE_NAME).then((c) => c.addAll(STATIC_ASSETS)).catch(() => {})
   );
   self.skipWaiting();
 });
 
-// Activate — clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// Fetch — network for API/fonts, cache-first for everything else
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  if (req.method !== 'GET') return;            // API POSTs go straight to network
+  const url = new URL(req.url);
+  if (url.hostname === 'api.anthropic.com') return;
 
-  // Always network for Anthropic API and Google Fonts
-  if (url.hostname === 'api.anthropic.com' ||
-      url.hostname === 'fonts.googleapis.com' ||
-      url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(fetch(event.request));
+  const isShell = url.origin === self.location.origin &&
+    (req.mode === 'navigate' || /\/(index\.html|manifest\.json)?$/.test(url.pathname));
+
+  if (isShell) {
+    // Network-first: always try GitHub for the latest, fall back to cache offline
+    event.respondWith(
+      fetch(req).then((res) => {
+        if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+    );
     return;
   }
 
-  // Cache-first for all other assets
+  // Everything else (fonts, flag CSS, icons): stale-while-revalidate
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        if (response.ok && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+    caches.match(req).then((cached) => {
+      const network = fetch(req).then((res) => {
+        if (res && (res.ok || res.type === 'opaque')) {
+          caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
         }
-        return response;
-      });
-    }).catch(() => {
-      return caches.match('./index.html');
+        return res;
+      }).catch(() => cached);
+      return cached || network;
     })
   );
 });
