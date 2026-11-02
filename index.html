@@ -449,7 +449,7 @@ input[type=range]::-webkit-slider-thumb{
       <div class="setup-flag-pill"><span class="fi fi-cn" style="width:22px;height:16px;border-radius:2px;display:inline-block;background-size:cover;vertical-align:middle"></span> <span>ZH</span></div>
       <div class="setup-flag-pill"><span class="fi fi-jp" style="width:22px;height:16px;border-radius:2px;display:inline-block;background-size:cover;vertical-align:middle"></span> <span>JA</span></div>
     </div>
-    <input class="setup-input" type="password" id="keyIn" placeholder="Paste your Anthropic API key…" autocomplete="off">
+    <input class="setup-input" type="password" id="keyIn" placeholder="Paste your Anthropic API key…" autocomplete="off" onkeydown="if(event.key==='Enter')saveKey()">
     <button class="setup-btn" onclick="saveKey()">Start Translating →</button>
   </div>
 
@@ -573,6 +573,10 @@ function flagImgEl(code, displayPx=40){
   return span;
 }
 
+// Paste the output of make-key.html here to ship an encrypted key in this file.
+// Users then unlock with the password instead of pasting an API key. Leave ''
+// to keep the paste-your-key setup.
+const ENC_KEY = 'j3FrFbHLsmLszN+zJ4kex6rM2C6V7V0Jht7RyXlFibeWqbdhn0W3JAewWIJgf8zAO/RFogwQgI+G2+SBvYo0dFjv2XFoX6IvUMmHAb6k/nxfeSIscN7Do8f9sg81LzkVLiv7/UDP0OLCx5uir1T0VET25AxrauYtBnJQLteLG90B5qiZuh0RVhZGZonIP60QFHFYSRFU';
 const MODEL = 'claude-haiku-5-5'; // fast + cheap; retired claude-sonnet-4 replaced Nov 2026
 let apiKey   = localStorage.getItem('as_key') || '';
 let fromLang = LANGS.find(l=>l.code==='en');
@@ -589,6 +593,10 @@ let synthVoices=[];
 
 window.addEventListener('DOMContentLoaded',()=>{
   buildDropdownGrid();
+  if(ENC_KEY){
+    document.getElementById('keyIn').placeholder = 'Enter password…';
+    document.querySelector('.setup-p').textContent = 'Enter the AllSpeak password to unlock the app on this phone.';
+  }
   document.getElementById('volR').value = vol;
   document.getElementById('rateR').value = spd;
   document.getElementById('asBtn').textContent = autoSpeak ? '🔊' : '🔇';
@@ -610,13 +618,32 @@ function loadVoices(){
   }
 }
 
-function saveKey(){
+async function saveKey(){
   const v = document.getElementById('keyIn').value.trim();
+  if(!v) return;
+  if(ENC_KEY){
+    try{
+      const k = await decryptKey(ENC_KEY, v);
+      if(!k.startsWith('sk-')) throw 0;
+      apiKey = k; localStorage.setItem('as_key', k);
+      showApp(); toast('✅ Unlocked');
+    }catch(e){ toast('❌ Wrong password'); }
+    return;
+  }
   if(!v.startsWith('sk-')){ toast('❌ Key must start with sk-'); return; }
   apiKey = v;
   localStorage.setItem('as_key', apiKey);
   showApp();
   toast('✅ Key saved!');
+}
+// AES-GCM with a PBKDF2-derived key (300k iterations). Blob = base64(salt16|iv12|ciphertext)
+async function decryptKey(blob, password){
+  const raw = Uint8Array.from(atob(blob), c=>c.charCodeAt(0));
+  const salt=raw.slice(0,16), iv=raw.slice(16,28), ct=raw.slice(28);
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key  = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:300000,hash:'SHA-256'}, base, {name:'AES-GCM',length:256}, false, ['decrypt']);
+  const pt   = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
+  return new TextDecoder().decode(pt);
 }
 function showApp(){
   document.getElementById('setupCard').classList.add('gone');
